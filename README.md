@@ -443,6 +443,7 @@ Capabilities:
 - edit and delete logs
 - view selected log line-item details with quantity and points breakdown
 - show activity type summary directly in the logs list
+- truncate long activity-type summaries in list rows for readability (full details remain available via View)
 - backdate logs using activity date override
 - keyboard helpers documented in UI tooltip (Enter to append row, Ctrl+Enter to save)
 

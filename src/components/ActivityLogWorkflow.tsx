@@ -787,7 +787,15 @@ export function ActivityLogWorkflow({ normalizeError }: Props) {
                 <td>{log.person_name}</td>
                 <td>{log.activity_date}</td>
                 <td>{log.group_name}</td>
-                <td>{log.activity_types_summary || "-"}</td>
+                <td>
+                  {log.activity_types_summary ? (
+                    <span className="activity-types-summary" title={log.activity_types_summary}>
+                      {log.activity_types_summary}
+                    </span>
+                  ) : (
+                    "-"
+                  )}
+                </td>
                 <td>{log.total_points}</td>
                 <td>{log.notes || "-"}</td>
                 <td>
