@@ -662,23 +662,24 @@ Steps:
   - `git pull`
   - `git status`
 2. Bump application version
-  - `npm version 0.1.8 --no-git-tag-version`
+  - `npm version X.Y.Z --no-git-tag-version`
 3. Commit and push version changes
   - `git add package.json package-lock.json`
-  - `git commit -m "chore: bump version to v0.1.8"`
+  - `git commit -m "chore: bump version to vX.Y.Z"`
   - `git push origin main`
 4. Create and push a matching version tag
-  - `git tag v0.1.8`
-  - `git push origin v0.1.8`
+  - `git tag vX.Y.Z`
+  - `git push origin vX.Y.Z`
 5. GitHub Actions builds Linux + Windows artifacts and publishes/updates the release automatically.
 
 Notes:
 
 - release workflow file: [.github/workflows/release.yml](.github/workflows/release.yml)
+- publish step uses GitHub CLI (`gh`) and is repository-explicit (no local `.git` dependency)
 - workflow runs are visible in GitHub Actions
 - if a tag was created by mistake, delete it locally and remotely:
-  - `git tag -d v0.1.8`
-  - `git push origin :refs/tags/v0.1.8`
+  - `git tag -d vX.Y.Z`
+  - `git push origin :refs/tags/vX.Y.Z`
 
 ---
 
