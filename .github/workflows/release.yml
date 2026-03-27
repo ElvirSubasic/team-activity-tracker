@@ -85,7 +85,20 @@ jobs:
           path: release-assets
 
       - name: Publish GitHub release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: release-assets/*
-          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_REF_TYPE}" != "tag" ]]; then
+            echo "This job publishes releases only for tag refs."
+            exit 1
+          fi
+
+          TAG_NAME="${GITHUB_REF_NAME}"
+
+          if gh release view "${TAG_NAME}" >/dev/null 2>&1; then
+            gh release upload "${TAG_NAME}" release-assets/* --clobber
+          else
+            gh release create "${TAG_NAME}" release-assets/* --generate-notes
+          fi
