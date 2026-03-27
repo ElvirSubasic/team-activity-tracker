@@ -16,9 +16,9 @@
     "build:electron": "tsc -p electron/tsconfig.json",
     "lint": "eslint . --ext .ts,.tsx --max-warnings=0",
     "test": "npm run rebuild:native:node && vitest run --passWithNoTests",
-    "package": "npm run rebuild:native:electron && npm run build && electron-builder",
-    "package:linux": "npm run rebuild:native:electron && npm run build && electron-builder --linux AppImage",
-    "package:win": "npm run rebuild:native:electron && npm run build && electron-builder --win portable"
+    "package": "npm run rebuild:native:electron && npm run build && electron-builder --publish never",
+    "package:linux": "npm run rebuild:native:electron && npm run build && electron-builder --linux AppImage --publish never",
+    "package:win": "npm run rebuild:native:electron && npm run build && electron-builder --win portable --publish never"
   },
   "dependencies": {
     "better-sqlite3": "^11.10.0",
