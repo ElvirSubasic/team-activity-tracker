@@ -611,6 +611,21 @@ label > select {
 .activity-type-actions {
   display: flex;
   align-items: end;
+  gap: 6px;
+}
+
+.drag-handle {
+  width: 100%;
+  max-width: 110px;
+  cursor: grab;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.activity-type-grid.dragging {
+  opacity: 0.75;
 }
 
 @media (max-width: 1200px) {

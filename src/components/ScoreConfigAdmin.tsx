@@ -29,6 +29,11 @@ type Draft = {
   groups: GroupDraft[];
 };
 
+type DraggingActivity = {
+  groupClientId: string;
+  typeClientId: string;
+};
+
 function createClientId(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 }
@@ -42,6 +47,52 @@ function createEmptyDraft(): Draft {
     apply_to_historical_logs: false,
     groups: []
   };
+}
+
+function normalizeActivityTypeSortOrder(activityTypes: ActivityTypeDraft[]): ActivityTypeDraft[] {
+  return activityTypes.map((activityType, index) => ({
+    ...activityType,
+    sort_order: index
+  }));
+}
+
+function orderActivitiesParentFirst(activityTypes: ActivityTypeDraft[]): ActivityTypeDraft[] {
+  const ordered: ActivityTypeDraft[] = [];
+  const visited = new Set<string>();
+
+  const appendWithChildren = (parent: ActivityTypeDraft) => {
+    if (visited.has(parent.client_id)) {
+      return;
+    }
+
+    ordered.push(parent);
+    visited.add(parent.client_id);
+
+    const parentCode = parent.code.trim().toUpperCase();
+    const children = activityTypes.filter(
+      (candidate) => (candidate.parent_activity_type_code ?? "").trim().toUpperCase() === parentCode
+    );
+
+    children.forEach((child) => {
+      if (!visited.has(child.client_id)) {
+        ordered.push(child);
+        visited.add(child.client_id);
+      }
+    });
+  };
+
+  activityTypes
+    .filter((activityType) => !activityType.parent_activity_type_code)
+    .forEach(appendWithChildren);
+
+  activityTypes.forEach((activityType) => {
+    if (!visited.has(activityType.client_id)) {
+      ordered.push(activityType);
+      visited.add(activityType.client_id);
+    }
+  });
+
+  return normalizeActivityTypeSortOrder(ordered);
 }
 
 function snapshotToDraft(snapshot: ScoreConfigSnapshot): Draft {
@@ -58,20 +109,22 @@ function snapshotToDraft(snapshot: ScoreConfigSnapshot): Draft {
       base_xp: group.base_xp,
       sort_order: group.sort_order,
       is_active: group.is_active === 1,
-      activity_types: group.activity_types.map((activityType) => ({
-        client_id: createClientId("type"),
-        code: activityType.code,
-        name: activityType.name,
-        percent_of_group_base: activityType.percent_of_group_base,
-        parent_activity_type_code:
-          activityType.parent_activity_type_id === null
-            ? null
-            : group.activity_types.find((candidate) => candidate.id === activityType.parent_activity_type_id)?.code ?? null,
-        percent_of_parent_type: activityType.percent_of_parent_type ?? undefined,
-        fixed_points: activityType.fixed_points,
-        is_active: activityType.is_active === 1,
-        sort_order: activityType.sort_order
-      }))
+      activity_types: orderActivitiesParentFirst(
+        group.activity_types.map((activityType) => ({
+          client_id: createClientId("type"),
+          code: activityType.code,
+          name: activityType.name,
+          percent_of_group_base: activityType.percent_of_group_base,
+          parent_activity_type_code:
+            activityType.parent_activity_type_id === null
+              ? null
+              : group.activity_types.find((candidate) => candidate.id === activityType.parent_activity_type_id)?.code ?? null,
+          percent_of_parent_type: activityType.percent_of_parent_type ?? undefined,
+          fixed_points: activityType.fixed_points,
+          is_active: activityType.is_active === 1,
+          sort_order: activityType.sort_order
+        }))
+      )
     }))
   };
 }
@@ -85,14 +138,15 @@ function draftToPayload(draft: Draft): ScoreConfigSnapshotCreateInput {
     apply_to_historical_logs: draft.activate ? draft.apply_to_historical_logs : false,
     groups: draft.groups.map((groupDraft, groupIndex) => {
       const { activity_types, ...group } = groupDraft;
+      const orderedActivityTypes = normalizeActivityTypeSortOrder(activity_types);
       return {
         ...group,
-        sort_order: group.sort_order ?? groupIndex,
-        activity_types: activity_types.map((activityTypeDraft, typeIndex) => {
+        sort_order: groupIndex,
+        activity_types: orderedActivityTypes.map((activityTypeDraft, typeIndex) => {
           const { ...activityType } = activityTypeDraft;
           return {
             ...activityType,
-            sort_order: activityType.sort_order ?? typeIndex,
+            sort_order: typeIndex,
             fixed_points:
               activityType.fixed_points === undefined || activityType.fixed_points === null
                 ? null
@@ -184,6 +238,7 @@ export function ScoreConfigAdmin({ normalizeError }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [shareSummaryMessage, setShareSummaryMessage] = useState<string | null>(null);
+  const [draggingActivity, setDraggingActivity] = useState<DraggingActivity | null>(null);
 
   const selectedVersion = useMemo(
     () => versions.find((version) => version.id === selectedVersionId) ?? null,
@@ -363,6 +418,93 @@ export function ScoreConfigAdmin({ normalizeError }: Props) {
             }
           : group
       )
+    }));
+  };
+
+  const moveActivityType = (groupClientId: string, fromTypeClientId: string, toTypeClientId: string) => {
+    if (fromTypeClientId === toTypeClientId) {
+      return;
+    }
+
+    setDraft((prev) => ({
+      ...prev,
+      groups: prev.groups.map((group) => {
+        if (group.client_id !== groupClientId) {
+          return group;
+        }
+
+        const fromIndex = group.activity_types.findIndex((activityType) => activityType.client_id === fromTypeClientId);
+        const toIndex = group.activity_types.findIndex((activityType) => activityType.client_id === toTypeClientId);
+
+        if (fromIndex < 0 || toIndex < 0) {
+          return group;
+        }
+
+        const nextActivityTypes = [...group.activity_types];
+        const [moved] = nextActivityTypes.splice(fromIndex, 1);
+        nextActivityTypes.splice(toIndex, 0, moved);
+
+        return {
+          ...group,
+          activity_types: normalizeActivityTypeSortOrder(nextActivityTypes)
+        };
+      })
+    }));
+  };
+
+  const moveActivityTypeByOffset = (groupClientId: string, typeClientId: string, offset: number) => {
+    setDraft((prev) => ({
+      ...prev,
+      groups: prev.groups.map((group) => {
+        if (group.client_id !== groupClientId) {
+          return group;
+        }
+
+        const currentIndex = group.activity_types.findIndex((activityType) => activityType.client_id === typeClientId);
+        const nextIndex = currentIndex + offset;
+
+        if (currentIndex < 0 || nextIndex < 0 || nextIndex >= group.activity_types.length) {
+          return group;
+        }
+
+        const nextActivityTypes = [...group.activity_types];
+        const [moved] = nextActivityTypes.splice(currentIndex, 1);
+        nextActivityTypes.splice(nextIndex, 0, moved);
+
+        return {
+          ...group,
+          activity_types: normalizeActivityTypeSortOrder(nextActivityTypes)
+        };
+      })
+    }));
+  };
+
+  const moveActivityBelowParent = (groupClientId: string, typeClientId: string, parentCode: string) => {
+    setDraft((prev) => ({
+      ...prev,
+      groups: prev.groups.map((group) => {
+        if (group.client_id !== groupClientId) {
+          return group;
+        }
+
+        const childIndex = group.activity_types.findIndex((activityType) => activityType.client_id === typeClientId);
+        const parentIndex = group.activity_types.findIndex(
+          (activityType) => activityType.code.trim().toUpperCase() === parentCode.trim().toUpperCase()
+        );
+
+        if (childIndex < 0 || parentIndex < 0 || childIndex > parentIndex) {
+          return group;
+        }
+
+        const nextActivityTypes = [...group.activity_types];
+        const [child] = nextActivityTypes.splice(childIndex, 1);
+        nextActivityTypes.splice(parentIndex, 0, child);
+
+        return {
+          ...group,
+          activity_types: normalizeActivityTypeSortOrder(nextActivityTypes)
+        };
+      })
     }));
   };
 
@@ -582,7 +724,7 @@ export function ScoreConfigAdmin({ normalizeError }: Props) {
 
         <div>
           <h3>Draft Editor</h3>
-          <p className="hint">Use percentage + base XP for automatic scoring. Fixed points are optional overrides for one-off cases.</p>
+          <p className="hint">Use percentage + base points for automatic scoring. Fixed points are optional overrides for one-off cases. Drag activity rows to reorder dropdown order.</p>
           <div className="grid-form">
             <label>
               New Version Name
@@ -681,7 +823,7 @@ export function ScoreConfigAdmin({ normalizeError }: Props) {
                     />
                   </label>
                   <label className="compact-field">
-                    Base XP
+                    Base Points
                     <input
                       className="input-compact"
                       type="number"
@@ -712,7 +854,7 @@ export function ScoreConfigAdmin({ normalizeError }: Props) {
                 </div>
 
                 <div className="activity-type-list">
-                  {group.activity_types.map((activityType, activityIndex) => (
+                  {group.activity_types.map((activityType) => (
                     <div key={activityType.client_id} className="activity-type-row">
                       {(() => {
                         const parentCandidates = group.activity_types.filter(
@@ -723,7 +865,25 @@ export function ScoreConfigAdmin({ normalizeError }: Props) {
                         const isSubgroup = Boolean(activityType.parent_activity_type_code);
 
                         return (
-                      <div className="activity-type-grid">
+                      <div
+                        className={`activity-type-grid ${draggingActivity?.typeClientId === activityType.client_id ? "dragging" : ""}`}
+                      >
+                        <label className="compact-field">
+                          Move
+                          <button
+                            className="ghost btn-sm drag-handle"
+                            type="button"
+                            draggable
+                            onDragStart={(event) => {
+                              setDraggingActivity({ groupClientId: group.client_id, typeClientId: activityType.client_id });
+                              event.dataTransfer.effectAllowed = "move";
+                            }}
+                            onDragEnd={() => setDraggingActivity(null)}
+                            title="Drag to reorder"
+                          >
+                            ↕ Drag
+                          </button>
+                        </label>
                         <label className="compact-field">
                           Code
                           <input
@@ -762,6 +922,8 @@ export function ScoreConfigAdmin({ normalizeError }: Props) {
                                   "percent_of_group_base",
                                   0
                                 );
+
+                                moveActivityBelowParent(group.client_id, activityType.client_id, parentCode);
                               }
                             }}
                           >
@@ -814,22 +976,6 @@ export function ScoreConfigAdmin({ normalizeError }: Props) {
                           />
                         </label>
                         <label className="compact-field">
-                          Sort
-                          <input
-                            className="input-compact"
-                            type="number"
-                            value={activityType.sort_order ?? activityIndex}
-                            onChange={(event) =>
-                              updateActivityType(
-                                group.client_id,
-                                activityType.client_id,
-                                "sort_order",
-                                Number(event.target.value)
-                              )
-                            }
-                          />
-                        </label>
-                        <label className="compact-field">
                           Active
                           <select
                             className="input-compact"
@@ -850,7 +996,34 @@ export function ScoreConfigAdmin({ normalizeError }: Props) {
                       </div>
                         );
                       })()}
-                      <div className="activity-type-actions">
+                      <div
+                        className="activity-type-actions"
+                        onDragOver={(event) => event.preventDefault()}
+                        onDrop={() => {
+                          if (!draggingActivity || draggingActivity.groupClientId !== group.client_id) {
+                            return;
+                          }
+
+                          moveActivityType(group.client_id, draggingActivity.typeClientId, activityType.client_id);
+                          setDraggingActivity(null);
+                        }}
+                      >
+                        <button
+                          className="ghost btn-sm"
+                          onClick={() => moveActivityTypeByOffset(group.client_id, activityType.client_id, -1)}
+                          type="button"
+                          title="Move up"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          className="ghost btn-sm"
+                          onClick={() => moveActivityTypeByOffset(group.client_id, activityType.client_id, 1)}
+                          type="button"
+                          title="Move down"
+                        >
+                          ↓
+                        </button>
                         <button
                           className="danger btn-sm"
                           onClick={() => removeActivityType(group.client_id, activityType.client_id)}

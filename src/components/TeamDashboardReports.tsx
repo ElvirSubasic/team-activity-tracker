@@ -328,7 +328,7 @@ export function TeamDashboardReports({ normalizeError }: Props) {
                 <div className="bar-chart-row" key={`week-${row.week_label}`}>
                   <div className="bar-chart-header">
                     <span>{row.week_label}</span>
-                    <strong>{row.total_points} pts</strong>
+                    <strong>{row.total_points} points</strong>
                   </div>
                   <div className="bar-chart-track" aria-hidden="true">
                     <div className="bar-chart-fill soft" style={{ width: `${Math.max(widthPercent, 2)}%` }} />

@@ -308,7 +308,7 @@ $$
 ### 7.2 Percent of group base
 
 $$
-	ext{points per unit} = \frac{\text{group base XP} \times \text{percent of group base}}{100}
+	ext{points per unit} = \frac{\text{group base points} \times \text{percent of group base}}{100}
 $$
 
 ### 7.3 Percent of parent activity
@@ -316,7 +316,7 @@ $$
 For one-level subgroup activities:
 
 $$
-	ext{parent points per unit} = \frac{\text{group base XP} \times \text{parent percent}}{100}
+	ext{parent points per unit} = \frac{\text{group base points} \times \text{parent percent}}{100}
 $$
 
 $$
@@ -325,7 +325,7 @@ $$
 
 Example:
 
-- group base XP = 100
+- group base points = 100
 - `Presentation Skills Based` = 10% of group = 10 points
 - `Presentation Skill 4` = 80% of parent = 8 points
 
@@ -570,7 +570,7 @@ Use when SQLite native binding compatibility becomes an issue.
 
 Expected artifact:
 
-- `dist/team-activity-tracker-0.1.0-linux-x86_64.AppImage`
+- `dist/team-activity-tracker-0.1.4-linux-x86_64.AppImage`
 
 ### 12.11 Package Windows executable
 
@@ -578,7 +578,7 @@ Expected artifact:
 
 Expected artifact:
 
-- `dist/team-activity-tracker-0.1.0-windows-x64.exe`
+- `dist/team-activity-tracker-0.1.4-windows-x64.exe`
 
 ---
 

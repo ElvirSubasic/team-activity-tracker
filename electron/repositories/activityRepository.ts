@@ -886,7 +886,6 @@ export class ActivityRepository {
          LEFT JOIN activity_log_item_scores alis ON alis.activity_log_item_id = ali.id
          ${where.replaceAll("al.", "al.")}
          GROUP BY p.id, p.index_num, p.name, p.role
-         HAVING COUNT(DISTINCT al.id) > 0
          ORDER BY log_count DESC, total_points DESC, p.name ASC`
       )
       .all(params) as Array<Omit<TeamLeaderboardRow, "participation_percent">>;
@@ -901,7 +900,7 @@ export class ActivityRepository {
   }
 
   getContributionDistribution(filters: TeamDashboardFilters): ContributionDistributionRow[] {
-    const leaderboard = this.getLeaderboard(filters);
+    const leaderboard = this.getLeaderboard(filters).filter((row) => row.total_points > 0);
     const totalPoints = leaderboard.reduce((sum, row) => sum + row.total_points, 0);
     return leaderboard.map((row) => ({
       person_id: row.person_id,
