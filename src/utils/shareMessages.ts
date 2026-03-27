@@ -1,9 +1,18 @@
 import type { ScoreConfigSnapshot, TeamLeaderboardRow } from "../types";
 
 export function buildLeaderboardShareMessage(rows: TeamLeaderboardRow[]): string {
+  const totalPoints = rows.reduce((sum, row) => sum + row.total_points, 0);
+  const percentFromPoints = (points: number): number => {
+    if (totalPoints <= 0) {
+      return 0;
+    }
+
+    return (points / totalPoints) * 100;
+  };
+
   const ordered = [...rows].sort(
     (a, b) =>
-      b.participation_percent - a.participation_percent ||
+      percentFromPoints(b.total_points) - percentFromPoints(a.total_points) ||
       b.total_points - a.total_points ||
       a.name.localeCompare(b.name)
   );
@@ -17,7 +26,7 @@ export function buildLeaderboardShareMessage(rows: TeamLeaderboardRow[]): string
   };
 
   const labels = ordered.map((row) => `${row.index_num} - ${row.name}`);
-  const percentages = ordered.map((row) => `${Math.round(row.participation_percent)}%`);
+  const percentages = ordered.map((row) => `${Math.round(percentFromPoints(row.total_points))}%`);
   const points = ordered.map((row) => formatPoints(row.total_points));
 
   const labelWidth = labels.reduce((max, value) => Math.max(max, value.length), 0);

@@ -15,6 +15,15 @@ let db: SqliteDatabase | null = null;
 let service: TrackerService | null = null;
 let teamActivityService: TeamActivityService | null = null;
 
+function sanitizeFileNamePart(value: string): string {
+  return value
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[<>:"/\\|?*]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 // Improves compatibility on some Linux environments where GPU compositing causes a blank window.
 app.disableHardwareAcceleration();
 app.commandLine.appendSwitch("disable-gpu");
@@ -292,23 +301,29 @@ app.whenReady().then(() => {
       fs.writeFileSync(result.filePath, csv, "utf8");
       return { ok: true, path: result.filePath };
     },
-    exportPersonLogsCsv: async (personId: number, filters: TeamDashboardFilters) => {
+    exportPersonLogsExcel: async (personId: number, filters: TeamDashboardFilters) => {
       if (!teamActivityService) {
         return { ok: false, error: "Team activity service is not initialized" };
       }
 
+      const person = teamActivityService.getPerson(personId);
+      const reportDate = new Date().toISOString().slice(0, 10);
+      const defaultFileName = person
+        ? `${sanitizeFileNamePart(person.index_num)}-${sanitizeFileNamePart(person.name)}-${reportDate}.xlsx`
+        : `person-${personId}-report-${reportDate}.xlsx`;
+
       const result = await dialog.showSaveDialog({
-        title: "Export person logs CSV",
-        defaultPath: path.join(app.getPath("documents"), `person-${personId}-logs-${new Date().toISOString().slice(0, 10)}.csv`),
-        filters: [{ name: "CSV", extensions: ["csv"] }]
+        title: "Export person logs Excel report",
+        defaultPath: path.join(app.getPath("documents"), defaultFileName),
+        filters: [{ name: "Excel Workbook", extensions: ["xlsx"] }]
       });
 
       if (result.canceled || !result.filePath) {
         return { ok: false, cancelled: true };
       }
 
-      const csv = teamActivityService.exportPersonLogsCsv(personId, filters);
-      fs.writeFileSync(result.filePath, csv, "utf8");
+      const workbook = teamActivityService.exportPersonLogsExcel(personId, filters);
+      fs.writeFileSync(result.filePath, workbook);
       return { ok: true, path: result.filePath };
     },
     exportLeaderboardCsv: async (filters: TeamDashboardFilters) => {

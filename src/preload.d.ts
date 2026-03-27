@@ -451,7 +451,7 @@ declare global {
       };
       report: {
         exportAllLogsGroupedCsv: (filters?: { start_date?: string; end_date?: string; inactive_days?: number }) => Promise<BackupRestoreResult>;
-        exportPersonLogsCsv: (
+        exportPersonLogsExcel: (
           personId: number,
           filters?: { start_date?: string; end_date?: string; inactive_days?: number }
         ) => Promise<BackupRestoreResult>;

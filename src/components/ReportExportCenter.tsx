@@ -57,7 +57,7 @@ export function ReportExportCenter({ normalizeError }: Props) {
       <div className="panel-header">
         <div>
           <h2>Exports & Generated Reports</h2>
-          <p className="hint">Generate CSV reports with structured filters and grouped actions.</p>
+          <p className="hint">Generate CSV and Excel reports with structured filters and grouped actions.</p>
         </div>
       </div>
 
@@ -133,12 +133,12 @@ export function ReportExportCenter({ normalizeError }: Props) {
 
       {persons.length > 0 ? (
         <div className="form-section">
-          <h3 className="section-title">Per-Person Export</h3>
+          <h3 className="section-title">Per-Person Report</h3>
           <form
             className="inline-form"
             onSubmit={(event) => {
               event.preventDefault();
-              void runExport(() => window.desktop.report.exportPersonLogsCsv(selectedPersonId, filters), "Per-person logs");
+              void runExport(() => window.desktop.report.exportPersonLogsExcel(selectedPersonId, filters), "Per-person Excel report");
             }}
           >
             <label>
@@ -152,12 +152,12 @@ export function ReportExportCenter({ normalizeError }: Props) {
               </select>
             </label>
             <button className="ghost" type="submit" disabled={isBusy || !selectedPersonId}>
-              Export selected person logs CSV
+              Export selected person report Excel
             </button>
           </form>
         </div>
       ) : (
-        <p className="hint">Create persons first to enable per-person export.</p>
+        <p className="hint">Create persons first to enable per-person reports.</p>
       )}
     </section>
   );

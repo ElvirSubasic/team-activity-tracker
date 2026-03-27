@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import * as XLSX from "xlsx";
 import { afterEach, describe, expect, it } from "vitest";
 import { openDatabase, type SqliteDatabase } from "../db/client";
 import { createTeamActivityService, type TeamActivityService } from "./teamActivityService";
@@ -640,13 +641,14 @@ describe("TeamActivityService", () => {
     expect(explain?.items[0].formula).toContain("100 × 50%");
   });
 
-  it("builds team dashboards and exports CSV reports", () => {
+  it("builds team dashboards and exports report files", () => {
     const ctx = createTestContext();
     cleanups.push(ctx.cleanup);
 
     const alpha = ctx.service.createPerson({ index_num: "D-1", name: "Alpha", role: "Lead" });
     const beta = ctx.service.createPerson({ index_num: "D-2", name: "Beta", role: "Member" });
-    ctx.service.createPerson({ index_num: "D-3", name: "Gamma", role: "Member" });
+    const gamma = ctx.service.createPerson({ index_num: "D-3", name: "Gamma", role: "Member" });
+    const delta = ctx.service.createPerson({ index_num: "D-4", name: "Delta", role: "Member" });
 
     const snapshot = ctx.service.createScoreConfigSnapshot({
       name: "Dashboard Config",
@@ -688,23 +690,44 @@ describe("TeamActivityService", () => {
       group_id: group.id,
       items: [{ activity_type_id: like!.id, quantity: 3 }]
     });
+    ctx.service.createActivityLogWithItems({
+      person_id: gamma.id,
+      activity_date: "2026-02-15",
+      group_id: group.id,
+      items: [{ activity_type_id: like!.id, quantity: 2 }]
+    });
+    ctx.service.createActivityLogWithItems({
+      person_id: delta.id,
+      activity_date: "2026-03-15",
+      group_id: group.id,
+      items: [{ activity_type_id: post!.id, quantity: 1 }]
+    });
 
-    const report = ctx.service.getTeamDashboardReport({ inactive_days: 10 });
-    expect(report.team_total_points).toBe(140);
-    expect(report.total_logs).toBe(3);
+    const report = ctx.service.getTeamDashboardReport({ inactive_days: 15 });
+    expect(report.team_total_points).toBe(210);
+    expect(report.total_logs).toBe(5);
     expect(report.leaderboard[0].person_id).toBe(alpha.id);
-    expect(report.leaderboard[0].participation_percent).toBeCloseTo(66.67, 2);
-    expect(report.contribution_distribution).toHaveLength(2);
+    expect(report.leaderboard.map((row) => row.person_id)).toEqual([alpha.id, delta.id, beta.id, gamma.id]);
+    expect(report.leaderboard[0].participation_percent).toBeCloseTo(40, 2);
+    expect(report.contribution_distribution).toHaveLength(4);
+    expect(report.contribution_distribution.map((row) => row.person_id)).toEqual([alpha.id, delta.id, beta.id, gamma.id]);
     expect(report.weekly_activity_volume.length).toBeGreaterThanOrEqual(2);
-    expect(report.inactive_members.some((member) => member.index_num === "D-3")).toBe(true);
+    expect(report.weekly_activity_volume[0]?.week_label).toBe("2026-W10");
+    expect(report.weekly_activity_volume.at(-1)?.week_label).toBe("2026-W06");
+    expect(report.inactive_members.map((member) => member.index_num)).toEqual(["D-3", "D-1", "D-2"]);
 
     const allLogsCsv = ctx.service.exportAllLogsGroupedByPersonCsv({});
     expect(allLogsCsv).toContain("person_id,person_name,index_num,log_id");
     expect(allLogsCsv).toContain("Alpha");
 
-    const personCsv = ctx.service.exportPersonLogsCsv(alpha.id, {});
-    expect(personCsv).toContain("log_id,activity_date,group_name,total_points,notes");
-    expect(personCsv).toContain("Content");
+    const personWorkbook = XLSX.read(ctx.service.exportPersonLogsExcel(alpha.id, {}), { type: "buffer" });
+    const personRows = XLSX.utils.sheet_to_json<string[]>(personWorkbook.Sheets[personWorkbook.SheetNames[0]], {
+      header: 1,
+      raw: false
+    });
+    expect(personRows[0]).toEqual(["log_id", "activity_date", "group_name", "activity_types", "total_points", "notes"]);
+    expect(personRows.some((row) => row.includes("Content"))).toBe(true);
+    expect(personRows.some((row) => row.includes("Post × 2"))).toBe(true);
 
     const leaderboardCsv = ctx.service.exportLeaderboardCsv({});
     expect(leaderboardCsv).toContain("participation_percent");
@@ -774,12 +797,24 @@ describe("TeamActivityService", () => {
     expect(filtered.logs.items.every((item) => item.group_id === group.id)).toBe(true);
     expect(filtered.logs.pageSize).toBe(10);
 
-    const filteredExport = ctx.service.exportPersonLogsCsv(person.id, {
+    const filteredWorkbook = XLSX.read(
+      ctx.service.exportPersonLogsExcel(person.id, {
       start_date: "2026-03-05",
       end_date: "2026-03-06"
+      }),
+      { type: "buffer" }
+    );
+    const filteredRows = XLSX.utils.sheet_to_json<string[]>(filteredWorkbook.Sheets[filteredWorkbook.SheetNames[0]], {
+      header: 1,
+      raw: false
     });
-    expect(filteredExport).toContain("2026-03-05");
-    expect(filteredExport).toContain("2026-03-06");
-    expect(filteredExport).not.toContain("2026-03-04");
+    const activityDates = filteredRows.slice(1).map((row) => row[1]);
+    const activityTypes = filteredRows.slice(1).map((row) => row[3]);
+    expect(activityDates).toContain("2026-03-05");
+    expect(activityDates).toContain("2026-03-06");
+    expect(activityDates).not.toContain("2026-03-04");
+    expect(activityDates[0]).toBe("2026-03-06");
+    expect(activityDates[1]).toBe("2026-03-05");
+    expect(activityTypes.every((value) => typeof value === "string" && value.length > 0)).toBe(true);
   });
 });

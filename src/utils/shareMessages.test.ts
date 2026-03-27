@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildLeaderboardShareMessage, buildScoringUpdateSummaryMessage } from "./shareMessages";
 
 describe("shareMessages", () => {
-  it("builds leaderboard messages sorted high to low", () => {
+  it("builds leaderboard messages sorted high to low using points-based percentages", () => {
     const message = buildLeaderboardShareMessage([
       {
         person_id: 3,
@@ -11,7 +11,7 @@ describe("shareMessages", () => {
         role: "Member",
         total_points: 0,
         log_count: 0,
-        participation_percent: 0,
+        participation_percent: 90,
         last_activity_date: null
       },
       {
@@ -21,7 +21,7 @@ describe("shareMessages", () => {
         role: "Member",
         total_points: 80,
         log_count: 2,
-        participation_percent: 40.4,
+        participation_percent: 1,
         last_activity_date: "2026-03-10"
       },
       {
@@ -31,7 +31,7 @@ describe("shareMessages", () => {
         role: "Lead",
         total_points: 120,
         log_count: 4,
-        participation_percent: 60.2,
+        participation_percent: 9,
         last_activity_date: "2026-03-11"
       }
     ]);

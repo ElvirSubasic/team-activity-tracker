@@ -460,10 +460,10 @@ Main file:
 Capabilities:
 
 - KPI cards
-- leaderboard table + bar chart
-- contribution distribution table + pie chart
-- weekly activity volume table + bar chart
-- inactive members table
+- leaderboard table + bar chart ordered by participation %, then points, then logs
+- contribution distribution table + pie chart ordered by contribution % then points
+- weekly activity volume table + bar chart with newest week first
+- inactive members table with most inactive members first
 - leaderboard sharing
 
 ### 10.5 Export / Backup / Restore
@@ -472,6 +472,14 @@ Files:
 
 - [src/components/ReportExportCenter.tsx](src/components/ReportExportCenter.tsx)
 - [src/components/BackupRestorePanel.tsx](src/components/BackupRestorePanel.tsx)
+
+Notes:
+
+- team CSV exports do not require dashboard-style ranking order
+- per-person report export is generated as an Excel workbook for sharing
+- per-person report includes the full `Activity Types` summary column from Activity Logs
+- per-person report export is ordered by newest created log first
+- per-person report file name uses the pattern `INDEX-NUMBER-Person-Name-YYYY-MM-DD.xlsx`
 
 ---
 

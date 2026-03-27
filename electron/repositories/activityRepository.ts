@@ -36,6 +36,28 @@ type ItemIdRow = { id: number; activity_log_id: number };
 export class ActivityRepository {
   constructor(private readonly db: SqliteDatabase) {}
 
+  private compareDashboardRows(
+    left: { percentage?: number; total_points?: number; log_count?: number; name?: string },
+    right: { percentage?: number; total_points?: number; log_count?: number; name?: string }
+  ): number {
+    const percentageDelta = (right.percentage ?? Number.NEGATIVE_INFINITY) - (left.percentage ?? Number.NEGATIVE_INFINITY);
+    if (percentageDelta !== 0) {
+      return percentageDelta;
+    }
+
+    const pointsDelta = (right.total_points ?? Number.NEGATIVE_INFINITY) - (left.total_points ?? Number.NEGATIVE_INFINITY);
+    if (pointsDelta !== 0) {
+      return pointsDelta;
+    }
+
+    const logsDelta = (right.log_count ?? Number.NEGATIVE_INFINITY) - (left.log_count ?? Number.NEGATIVE_INFINITY);
+    if (logsDelta !== 0) {
+      return logsDelta;
+    }
+
+    return (left.name ?? "").localeCompare(right.name ?? "");
+  }
+
   listGroupsWithTypesByConfigVersion(configVersionId: number): ScoreConfigGroup[] {
     const groups = this.db
       .prepare(
@@ -909,20 +931,50 @@ export class ActivityRepository {
         participation_percent:
           totalLogs > 0 ? Math.round(((row.log_count / totalLogs) * 100 + Number.EPSILON) * 100) / 100 : 0
       }))
-      .sort((a, b) => b.participation_percent - a.participation_percent || b.total_points - a.total_points || a.name.localeCompare(b.name));
+      .sort((a, b) =>
+        this.compareDashboardRows(
+          {
+            percentage: a.participation_percent,
+            total_points: a.total_points,
+            log_count: a.log_count,
+            name: a.name
+          },
+          {
+            percentage: b.participation_percent,
+            total_points: b.total_points,
+            log_count: b.log_count,
+            name: b.name
+          }
+        )
+      );
   }
 
   getContributionDistribution(filters: TeamDashboardFilters): ContributionDistributionRow[] {
     const leaderboard = this.getLeaderboard(filters).filter((row) => row.total_points > 0);
     const totalPoints = leaderboard.reduce((sum, row) => sum + row.total_points, 0);
-    return leaderboard.map((row) => ({
-      person_id: row.person_id,
-      index_num: row.index_num,
-      name: row.name,
-      total_points: row.total_points,
-      contribution_percent:
-        totalPoints > 0 ? Math.round(((row.total_points / totalPoints) * 100 + Number.EPSILON) * 100) / 100 : 0
-    }));
+    return leaderboard
+      .map((row) => ({
+        person_id: row.person_id,
+        index_num: row.index_num,
+        name: row.name,
+        total_points: row.total_points,
+        contribution_percent:
+          totalPoints > 0 ? Math.round(((row.total_points / totalPoints) * 100 + Number.EPSILON) * 100) / 100 : 0
+      }))
+      .sort((a, b) =>
+        this.compareDashboardRows(
+          {
+            percentage: a.contribution_percent,
+            total_points: a.total_points,
+            name: a.name
+          },
+          {
+            percentage: b.contribution_percent,
+            total_points: b.total_points,
+            name: b.name
+          }
+        )
+      );
   }
 
   getWeeklyActivityVolume(filters: TeamDashboardFilters): WeeklyActivityVolumeRow[] {
@@ -947,7 +999,7 @@ export class ActivityRepository {
          LEFT JOIN activity_log_item_scores alis ON alis.activity_log_item_id = ali.id
          ${where}
          GROUP BY week_label
-         ORDER BY week_label ASC`
+         ORDER BY week_label DESC`
       )
       .all(params) as WeeklyActivityVolumeRow[];
   }
@@ -970,7 +1022,10 @@ export class ActivityRepository {
          GROUP BY p.id, p.index_num, p.name, p.role
          HAVING MAX(al.activity_date) IS NULL
             OR julianday('now') - julianday(MAX(al.activity_date)) > @days
-         ORDER BY last_activity_date ASC, p.name ASC`
+        ORDER BY CASE WHEN MAX(al.activity_date) IS NULL THEN 1 ELSE 0 END DESC,
+              days_since_last_activity DESC,
+              last_activity_date ASC,
+              p.name ASC`
       )
       .all({ days }) as InactiveMemberRow[];
   }

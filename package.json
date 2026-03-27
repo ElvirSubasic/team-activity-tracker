@@ -1,6 +1,6 @@
 {
   "name": "team-activity-tracker",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "private": true,
   "author": "Elvir Subasic",
   "description": "Offline-first desktop scaffold with Electron + React + TypeScript + Vite",
@@ -25,7 +25,8 @@
     "bootstrap": "^5.3.8",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^7.13.2"
+    "react-router-dom": "^7.13.2",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",

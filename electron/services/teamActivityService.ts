@@ -1,4 +1,5 @@
 import type { SqliteDatabase } from "../db/client";
+import * as XLSX from "xlsx";
 import { ActivityRepository } from "../repositories/activityRepository";
 import { AuditRepository } from "../repositories/auditRepository";
 import { PersonRepository } from "../repositories/personRepository";
@@ -330,24 +331,27 @@ export class TeamActivityService {
     return this.rowsToCsv(headers, csvRows);
   }
 
-  exportPersonLogsCsv(personId: number, filters: TeamDashboardFilters = {}): string {
+  exportPersonLogsExcel(personId: number, filters: TeamDashboardFilters = {}): Buffer {
     this.ensurePositiveInteger(personId, "person id");
     const person = this.persons.getById(personId);
     if (!person) {
       throw new Error("Person not found");
     }
 
-    const rows = this.collectAllLogsForExport({ ...filters, person_id: personId });
-    const headers = ["log_id", "activity_date", "group_name", "total_points", "notes"];
-    const csvRows = rows.map((row) => [
+    const rows = this.collectAllLogsForExport({ ...filters, person_id: personId }).sort(
+      (a, b) => b.created_at.localeCompare(a.created_at) || b.id - a.id
+    );
+    const headers = ["log_id", "activity_date", "group_name", "activity_types", "total_points", "notes"];
+    const workbookRows = rows.map((row) => [
       String(row.id),
       row.activity_date,
       row.group_name,
+      row.activity_types_summary,
       String(row.total_points),
       row.notes ?? ""
     ]);
 
-    return this.rowsToCsv(headers, csvRows);
+    return this.rowsToWorkbook(`${person.index_num} ${person.name} Report`, headers, workbookRows);
   }
 
   exportLeaderboardCsv(filters: TeamDashboardFilters = {}): string {
@@ -1632,6 +1636,35 @@ export class TeamActivityService {
   private rowsToCsv(headers: string[], rows: string[][]): string {
     const csvLines = [headers, ...rows].map((row) => row.map(this.escapeCsvCell).join(","));
     return `${csvLines.join("\n")}\n`;
+  }
+
+  private rowsToWorkbook(sheetName: string, headers: string[], rows: string[][]): Buffer {
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const workbook = XLSX.utils.book_new();
+    const normalizedSheetName = this.normalizeWorksheetName(sheetName);
+
+    worksheet["!cols"] = headers.map((header, columnIndex) => ({
+      wch: Math.min(
+        40,
+        Math.max(
+          header.length,
+          ...rows.map((row) => (row[columnIndex] ?? "").length),
+          12
+        )
+      )
+    }));
+
+    if (worksheet["!ref"]) {
+      worksheet["!autofilter"] = { ref: worksheet["!ref"] };
+    }
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, normalizedSheetName);
+    return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
+  }
+
+  private normalizeWorksheetName(name: string): string {
+    const cleaned = name.replace(/[\\/?*:]/g, " ").replace(/\[|\]/g, " ").trim().replace(/\s+/g, " ");
+    return (cleaned || "Report").slice(0, 31);
   }
 
   private escapeCsvCell(value: string): string {

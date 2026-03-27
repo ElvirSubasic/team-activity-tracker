@@ -54,7 +54,7 @@ type TrackerIpcContext = {
   deactivateScoreConfigVersion: (id: number) => ScoreConfigVersion;
   deleteScoreConfigVersion: (id: number) => void;
   exportAllLogsGroupedCsv: (filters: TeamDashboardFilters) => Promise<BackupRestoreResult>;
-  exportPersonLogsCsv: (personId: number, filters: TeamDashboardFilters) => Promise<BackupRestoreResult>;
+  exportPersonLogsExcel: (personId: number, filters: TeamDashboardFilters) => Promise<BackupRestoreResult>;
   exportLeaderboardCsv: (filters: TeamDashboardFilters) => Promise<BackupRestoreResult>;
   exportScoreConfigHistoryCsv: () => Promise<BackupRestoreResult>;
 };
@@ -200,8 +200,8 @@ export function registerTrackerIpcHandlers(context: TrackerIpcContext): void {
     return context.exportAllLogsGroupedCsv(filters);
   });
 
-  ipcMain.handle("report:exportPersonLogsCsv", (_event, personId: number, filters: TeamDashboardFilters = {}) => {
-    return context.exportPersonLogsCsv(personId, filters);
+  ipcMain.handle("report:exportPersonLogsExcel", (_event, personId: number, filters: TeamDashboardFilters = {}) => {
+    return context.exportPersonLogsExcel(personId, filters);
   });
 
   ipcMain.handle("report:exportLeaderboardCsv", (_event, filters: TeamDashboardFilters = {}) => {

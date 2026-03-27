@@ -199,10 +199,10 @@ contextBridge.exposeInMainWorld("desktop", {
   report: {
     exportAllLogsGroupedCsv: (filters?: { start_date?: string; end_date?: string; inactive_days?: number }) =>
       ipcRenderer.invoke("report:exportAllLogsGroupedCsv", filters),
-    exportPersonLogsCsv: (
+    exportPersonLogsExcel: (
       personId: number,
       filters?: { start_date?: string; end_date?: string; inactive_days?: number }
-    ) => ipcRenderer.invoke("report:exportPersonLogsCsv", personId, filters),
+    ) => ipcRenderer.invoke("report:exportPersonLogsExcel", personId, filters),
     exportLeaderboardCsv: (filters?: { start_date?: string; end_date?: string; inactive_days?: number }) =>
       ipcRenderer.invoke("report:exportLeaderboardCsv", filters),
     exportScoreConfigHistoryCsv: () => ipcRenderer.invoke("report:exportScoreConfigHistoryCsv")
