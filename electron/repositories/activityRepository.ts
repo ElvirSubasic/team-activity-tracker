@@ -931,22 +931,7 @@ export class ActivityRepository {
         participation_percent:
           totalLogs > 0 ? Math.round(((row.log_count / totalLogs) * 100 + Number.EPSILON) * 100) / 100 : 0
       }))
-      .sort((a, b) =>
-        this.compareDashboardRows(
-          {
-            percentage: a.participation_percent,
-            total_points: a.total_points,
-            log_count: a.log_count,
-            name: a.name
-          },
-          {
-            percentage: b.participation_percent,
-            total_points: b.total_points,
-            log_count: b.log_count,
-            name: b.name
-          }
-        )
-      );
+      .sort((a, b) => b.total_points - a.total_points || b.log_count - a.log_count || a.name.localeCompare(b.name));
   }
 
   getContributionDistribution(filters: TeamDashboardFilters): ContributionDistributionRow[] {

@@ -245,7 +245,6 @@ export function TeamDashboardReports({ normalizeError }: Props) {
             <thead>
               <tr>
                 <th>Person</th>
-                <th>Participation %</th>
                 <th>Logs</th>
                 <th>Total Points</th>
                 <th>Last Activity</th>
@@ -257,7 +256,6 @@ export function TeamDashboardReports({ normalizeError }: Props) {
                   <td>
                     {row.index_num} · {row.name}
                   </td>
-                  <td>{row.participation_percent.toFixed(2)}%</td>
                   <td>{row.log_count}</td>
                   <td>{row.total_points}</td>
                   <td>{row.last_activity_date ?? "-"}</td>

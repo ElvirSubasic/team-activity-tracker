@@ -691,6 +691,12 @@ describe("TeamActivityService", () => {
       items: [{ activity_type_id: like!.id, quantity: 3 }]
     });
     ctx.service.createActivityLogWithItems({
+      person_id: beta.id,
+      activity_date: "2026-02-20",
+      group_id: group.id,
+      items: [{ activity_type_id: like!.id, quantity: 1 }]
+    });
+    ctx.service.createActivityLogWithItems({
       person_id: gamma.id,
       activity_date: "2026-02-15",
       group_id: group.id,
@@ -704,11 +710,11 @@ describe("TeamActivityService", () => {
     });
 
     const report = ctx.service.getTeamDashboardReport({ inactive_days: 15 });
-    expect(report.team_total_points).toBe(210);
-    expect(report.total_logs).toBe(5);
+    expect(report.team_total_points).toBe(220);
+    expect(report.total_logs).toBe(6);
     expect(report.leaderboard[0].person_id).toBe(alpha.id);
     expect(report.leaderboard.map((row) => row.person_id)).toEqual([alpha.id, delta.id, beta.id, gamma.id]);
-    expect(report.leaderboard[0].participation_percent).toBeCloseTo(40, 2);
+    expect(report.leaderboard.find((row) => row.person_id === beta.id)?.participation_percent).toBeCloseTo(33.33, 2);
     expect(report.contribution_distribution).toHaveLength(4);
     expect(report.contribution_distribution.map((row) => row.person_id)).toEqual([alpha.id, delta.id, beta.id, gamma.id]);
     expect(report.weekly_activity_volume.length).toBeGreaterThanOrEqual(2);

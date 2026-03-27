@@ -460,7 +460,7 @@ Main file:
 Capabilities:
 
 - KPI cards
-- leaderboard table + bar chart ordered by participation %, then points, then logs
+- leaderboard table + bar chart ordered by total points, then logs
 - contribution distribution table + pie chart ordered by contribution % then points
 - weekly activity volume table + bar chart with newest week first
 - inactive members table with most inactive members first
