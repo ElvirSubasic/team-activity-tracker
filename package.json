@@ -21,7 +21,7 @@
     "package:win": "npm run rebuild:native:electron && npm run build && electron-builder --win portable --publish never"
   },
   "dependencies": {
-    "better-sqlite3": "^11.10.0",
+    "better-sqlite3": "^12.8.0",
     "bootstrap": "^5.3.8",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -37,7 +37,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "concurrently": "^9.1.0",
     "cross-env": "^7.0.3",
-    "electron": "^31.7.7",
+    "electron": "^41.1.0",
     "electron-builder": "^25.1.8",
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^9.1.0",
