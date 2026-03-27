@@ -153,6 +153,7 @@ Files:
 The main process is responsible for:
 
 - creating the Electron window
+- starting the app window maximized for full-screen workflow by default
 - initializing the database
 - wiring IPC handlers
 - file open/save dialogs
@@ -438,8 +439,12 @@ Capabilities:
 - duplicate previous log
 - score preview
 - batch mode
+- single/batch save validations before submit (required group/person/items)
 - edit and delete logs
+- view selected log line-item details with quantity and points breakdown
+- show activity type summary directly in the logs list
 - backdate logs using activity date override
+- keyboard helpers documented in UI tooltip (Enter to append row, Ctrl+Enter to save)
 
 Important note:
 

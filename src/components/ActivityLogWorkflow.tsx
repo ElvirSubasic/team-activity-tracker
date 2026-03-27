@@ -54,6 +54,8 @@ export function ActivityLogWorkflow({ normalizeError }: Props) {
 
   const [preview, setPreview] = useState<ActivityScorePreview | null>(null);
   const [editingLogId, setEditingLogId] = useState<number | null>(null);
+  const [selectedLogDetail, setSelectedLogDetail] = useState<ActivityLogDetail | null>(null);
+  const [selectedLogId, setSelectedLogId] = useState<number | null>(null);
 
   const [logs, setLogs] = useState<ActivityLogListItem[]>([]);
   const [logFilters, setLogFilters] = useState<ActivityLogListFilters>({
@@ -121,6 +123,10 @@ export function ActivityLogWorkflow({ normalizeError }: Props) {
       }));
   };
 
+  const validItems = rowsAsPayload();
+  const canSaveSingle = personId > 0 && groupId > 0 && validItems.length > 0;
+  const canSaveBatch = groupId > 0 && batchPersonIds.length > 0 && validItems.length > 0;
+
   const loadLogs = async (filters: ActivityLogListFilters = logFilters) => {
     const response = await window.desktop.activity.list(filters);
     setLogs(response.items);
@@ -178,6 +184,23 @@ export function ActivityLogWorkflow({ normalizeError }: Props) {
     setRows([makeRow()]);
     setPreview(null);
     setStatus(null);
+  };
+
+  const loadLogDetail = async (id: number) => {
+    setError(null);
+
+    try {
+      const detail = await window.desktop.activity.get(id);
+      if (!detail) {
+        setError("Activity log not found.");
+        return;
+      }
+
+      setSelectedLogId(id);
+      setSelectedLogDetail(detail);
+    } catch (err) {
+      setError(normalizeError(err).message);
+    }
   };
 
   const addRow = () => {
@@ -252,13 +275,35 @@ export function ActivityLogWorkflow({ normalizeError }: Props) {
     setError(null);
     setStatus(null);
 
+    const items = rowsAsPayload();
+
+    if (!groupId) {
+      setError("Group is required.");
+      return;
+    }
+
+    if (batchMode) {
+      if (batchPersonIds.length === 0) {
+        setError("Select at least one person in batch mode.");
+        return;
+      }
+    } else if (!personId) {
+      setError("Person is required.");
+      return;
+    }
+
+    if (items.length === 0) {
+      setError("Add at least one activity row before saving.");
+      return;
+    }
+
     try {
       const payload = {
         person_id: personId,
         activity_date: activityDate,
         group_id: groupId,
         notes: notes || null,
-        items: rowsAsPayload()
+        items
       };
 
       if (editingLogId) {
@@ -270,7 +315,7 @@ export function ActivityLogWorkflow({ normalizeError }: Props) {
           activity_date: activityDate,
           group_id: groupId,
           notes: notes || null,
-          items: payload.items
+          items
         });
 
         setStatus(`Created ${result.created} logs in batch mode.`);
@@ -303,15 +348,19 @@ export function ActivityLogWorkflow({ normalizeError }: Props) {
       setGroupId(detail.log.group_id);
       setNotes(detail.log.notes ?? "");
       setRows(
-        detail.items.map((item) => ({
-          client_id: `row-${Math.random().toString(36).slice(2, 10)}`,
-          parent_activity_type_id: resolveParentTypeId(item.activity_type_id),
-          activity_type_id: item.activity_type_id,
-          quantity: item.quantity,
-          notes: item.notes ?? ""
-        }))
+        detail.items.length > 0
+          ? detail.items.map((item) => ({
+              client_id: `row-${Math.random().toString(36).slice(2, 10)}`,
+              parent_activity_type_id: resolveParentTypeId(item.activity_type_id),
+              activity_type_id: item.activity_type_id,
+              quantity: item.quantity,
+              notes: item.notes ?? ""
+            }))
+          : [makeRow()]
       );
       setPreview(null);
+      setSelectedLogId(detail.log.id);
+      setSelectedLogDetail(detail);
     } catch (err) {
       setError(normalizeError(err).message);
     }
@@ -329,6 +378,10 @@ export function ActivityLogWorkflow({ normalizeError }: Props) {
       await window.desktop.activity.delete(id);
       setStatus(`Deleted log #${id}.`);
       await loadLogs(logFilters);
+      if (selectedLogId === id) {
+        setSelectedLogId(null);
+        setSelectedLogDetail(null);
+      }
     } catch (err) {
       setError(normalizeError(err).message);
     }
@@ -386,7 +439,7 @@ export function ActivityLogWorkflow({ normalizeError }: Props) {
 
           <label>
             Group
-            <select value={groupId} onChange={(event) => setGroupId(Number(event.target.value))}>
+            <select className="aligned-control" value={groupId} onChange={(event) => setGroupId(Number(event.target.value))}>
               {groups.map((group) => (
                 <option key={group.id} value={group.id}>
                   {group.name}
@@ -397,7 +450,13 @@ export function ActivityLogWorkflow({ normalizeError }: Props) {
 
           <label>
             Notes
-            <input value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Optional notes" />
+            <input
+              type="text"
+              className="aligned-control"
+              value={notes}
+              onChange={(event) => setNotes(event.target.value ?? "")}
+              placeholder="Optional notes"
+            />
           </label>
         </div>
 
@@ -434,7 +493,7 @@ export function ActivityLogWorkflow({ normalizeError }: Props) {
             Score preview
           </button>
 
-          <button onClick={saveEntry} disabled={isLoading || !groupId || !personId}>
+          <button onClick={saveEntry} disabled={isLoading || (batchMode ? !canSaveBatch : !canSaveSingle)}>
             {editingLogId ? "Update log" : batchMode ? "Save batch logs" : "Save log"}
           </button>
 
@@ -546,6 +605,7 @@ export function ActivityLogWorkflow({ normalizeError }: Props) {
                   </td>
                   <td>
                     <input
+                      className="aligned-control"
                       value={row.notes}
                       onChange={(event) => updateRow(row.client_id, { notes: event.target.value })}
                     />
@@ -564,8 +624,13 @@ export function ActivityLogWorkflow({ normalizeError }: Props) {
         <div className="form-row action-row">
           <button className="ghost" onClick={addRow}>
             Add activity row
+            <span className="info-badge" aria-label="Activity row entry tips">
+              i
+              <span className="info-popup" role="tooltip">
+                Press Enter in quantity to append a new row. Press Ctrl+Enter to save.
+              </span>
+            </span>
           </button>
-          <span className="hint">Tip: press Enter in quantity to append a new row. Ctrl+Enter saves.</span>
         </div>
 
         {preview ? (
@@ -701,7 +766,7 @@ export function ActivityLogWorkflow({ normalizeError }: Props) {
         </label>
       </div>
 
-      <div className="table-wrap">
+      <div className="table-wrap activity-log-list-wrap">
         <table>
           <thead>
             <tr>
@@ -709,6 +774,7 @@ export function ActivityLogWorkflow({ normalizeError }: Props) {
               <th>Person</th>
               <th>Date</th>
               <th>Group</th>
+              <th>Activity Types</th>
               <th>Total Points</th>
               <th>Notes</th>
               <th>Actions</th>
@@ -721,10 +787,14 @@ export function ActivityLogWorkflow({ normalizeError }: Props) {
                 <td>{log.person_name}</td>
                 <td>{log.activity_date}</td>
                 <td>{log.group_name}</td>
+                <td>{log.activity_types_summary || "-"}</td>
                 <td>{log.total_points}</td>
                 <td>{log.notes || "-"}</td>
                 <td>
                   <div className="row-actions">
+                    <button className="ghost" onClick={() => void loadLogDetail(log.id)}>
+                      View
+                    </button>
                     <button className="ghost" onClick={() => void editLog(log.id)}>
                       Edit
                     </button>
@@ -739,7 +809,7 @@ export function ActivityLogWorkflow({ normalizeError }: Props) {
         </table>
       </div>
 
-      <div className="form-row pagination-row">
+      <div className="form-row activity-log-pagination-row">
         <span className="hint">
           Page {logFilters.page ?? 1} / {Math.max(totalPages, 1)} · {totalLogs} logs
         </span>
@@ -770,6 +840,39 @@ export function ActivityLogWorkflow({ normalizeError }: Props) {
           Next
         </button>
       </div>
+
+      {selectedLogDetail && selectedLogId ? (
+        <div className="preview-box">
+          <h3>Selected Log Details</h3>
+          <p className="hint">
+            Log #{selectedLogId} · Total points: {selectedLogDetail.total_points}
+          </p>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Activity Type</th>
+                  <th>Quantity</th>
+                  <th>Points/Unit</th>
+                  <th>Total Points</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {selectedLogDetail.items.map((item) => (
+                  <tr key={item.id}>
+                    <td>{item.activity_type_name}</td>
+                    <td>{item.quantity}</td>
+                    <td>{item.points_per_unit}</td>
+                    <td>{item.total_points}</td>
+                    <td>{item.notes || "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

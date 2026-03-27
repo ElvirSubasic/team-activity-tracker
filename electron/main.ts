@@ -26,10 +26,10 @@ app.commandLine.appendSwitch("use-gl", "swiftshader");
 
 function createWindow() {
   const win = new BrowserWindow({
-    width: 1100,
-    height: 760,
-    minWidth: 900,
-    minHeight: 600,
+    width: 1440,
+    height: 900,
+    minWidth: 1100,
+    minHeight: 700,
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -37,6 +37,8 @@ function createWindow() {
       nodeIntegration: false
     }
   });
+
+  win.maximize();
 
   if (isDev) {
     win.loadURL(process.env.VITE_DEV_SERVER_URL as string);

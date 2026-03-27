@@ -390,6 +390,7 @@ export type ActivityLogListItem = {
   activity_date: string;
   group_id: number;
   group_name: string;
+  activity_types_summary: string;
   notes: string | null;
   created_at: string;
   updated_at: string;

@@ -290,6 +290,19 @@ export class ActivityRepository {
                 al.activity_date,
                 al.group_id,
                 ag.name AS group_name,
+                COALESCE(
+                  (
+                    SELECT GROUP_CONCAT(entry, ', ')
+                    FROM (
+                      SELECT at2.name || ' × ' || RTRIM(RTRIM(printf('%.2f', ali2.quantity), '0'), '.') AS entry
+                      FROM activity_log_items ali2
+                      INNER JOIN activity_types at2 ON at2.id = ali2.activity_type_id
+                      WHERE ali2.activity_log_id = al.id
+                      ORDER BY ali2.id ASC
+                    )
+                  ),
+                  ''
+                ) AS activity_types_summary,
                 al.notes,
                 al.created_at,
                 al.updated_at,

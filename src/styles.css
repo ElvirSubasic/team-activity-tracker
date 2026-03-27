@@ -278,6 +278,17 @@ h3 {
   margin-right: 6px;
 }
 
+.activity-log-pagination-row {
+  border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  padding-top: 10px;
+  margin-top: 0;
+  align-items: center;
+}
+
+.activity-log-pagination-row .hint {
+  margin-right: 6px;
+}
+
 .action-wrap {
   row-gap: 10px;
 }
@@ -311,6 +322,7 @@ h3 {
 
 input,
 select,
+textarea,
 button {
   border-radius: 10px;
   border: 1px solid var(--border);
@@ -489,9 +501,31 @@ td {
 }
 
 label > input,
-label > select {
+label > select,
+label > textarea {
   width: 100%;
   min-width: 0;
+}
+
+.aligned-control {
+  height: 40px !important;
+  min-height: 40px !important;
+  padding: 10px 12px !important;
+  line-height: 20px !important;
+  font-size: 14px !important;
+  box-sizing: border-box;
+}
+
+.activity-log-list-wrap table tbody tr:last-child td {
+  border-bottom: none !important;
+}
+
+.activity-log-list-wrap {
+  margin-bottom: 0;
+}
+
+.activity-log-list-wrap table {
+  border-bottom: none !important;
 }
 
 .clickable-row {
