@@ -572,6 +572,14 @@ Expected artifact:
 
 - `dist/Team Activity Tracker-0.1.0-linux-x86_64.AppImage`
 
+### 12.11 Package Windows executable
+
+- `npm run package:win`
+
+Expected artifact:
+
+- `dist/Team Activity Tracker-0.1.0-windows-x64.exe`
+
 ---
 
 ## 13. Typical Maintenance Tasks
@@ -628,6 +636,7 @@ Recommended release checklist:
    - `npm run build`
 4. Package target
    - `npm run package:linux`
+  - `npm run package:win`
 5. Open the packaged app and smoke test:
    - scoring settings
    - subgroup selection
@@ -635,6 +644,37 @@ Recommended release checklist:
    - dashboard
    - exports
    - backup/restore
+
+### 14.1 Manual GitHub release (no GitHub Actions)
+
+This project uses manual releases.
+
+Steps:
+
+1. Ensure `main` is up to date and clean
+  - `git checkout main`
+  - `git pull`
+  - `git status`
+2. Build release artifacts locally
+  - `npm run package:linux`
+  - `npm run package:win`
+3. Create and push a version tag
+  - `git tag v0.1.1`
+  - `git push origin v0.1.1`
+4. Open GitHub repository → Releases → Draft new release
+  - choose tag `v0.1.1`
+  - title example: `Team Activity Tracker v0.1.1`
+  - add release notes
+5. Upload built files from `dist/`:
+  - Linux AppImage (`*.AppImage`)
+  - Windows executable (`*.exe`)
+6. Publish release
+
+Notes:
+
+- if a tag was created by mistake, delete it locally and remotely:
+  - `git tag -d v0.1.1`
+  - `git push origin :refs/tags/v0.1.1`
 
 ---
 
