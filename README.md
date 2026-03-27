@@ -46,7 +46,7 @@ Important product rules:
 
 ## 3. Technology Stack
 
-- Electron 31
+- Electron 41
 - React 18
 - TypeScript
 - Vite 5
@@ -651,9 +651,9 @@ Recommended release checklist:
    - exports
    - backup/restore
 
-### 14.1 Manual GitHub release (no GitHub Actions)
+### 14.1 Automated GitHub release (GitHub Actions)
 
-This project uses manual releases.
+This project uses a tag-triggered release workflow.
 
 Steps:
 
@@ -661,26 +661,24 @@ Steps:
   - `git checkout main`
   - `git pull`
   - `git status`
-2. Build release artifacts locally
-  - `npm run package:linux`
-  - `npm run package:win`
-3. Create and push a version tag
-  - `git tag v0.1.1`
-  - `git push origin v0.1.1`
-4. Open GitHub repository → Releases → Draft new release
-  - choose tag `v0.1.1`
-  - title example: `Team Activity Tracker v0.1.1`
-  - add release notes
-5. Upload built files from `dist/`:
-  - Linux AppImage (`*.AppImage`)
-  - Windows executable (`*.exe`)
-6. Publish release
+2. Bump application version
+  - `npm version 0.1.8 --no-git-tag-version`
+3. Commit and push version changes
+  - `git add package.json package-lock.json`
+  - `git commit -m "chore: bump version to v0.1.8"`
+  - `git push origin main`
+4. Create and push a matching version tag
+  - `git tag v0.1.8`
+  - `git push origin v0.1.8`
+5. GitHub Actions builds Linux + Windows artifacts and publishes/updates the release automatically.
 
 Notes:
 
+- release workflow file: [.github/workflows/release.yml](.github/workflows/release.yml)
+- workflow runs are visible in GitHub Actions
 - if a tag was created by mistake, delete it locally and remotely:
-  - `git tag -d v0.1.1`
-  - `git push origin :refs/tags/v0.1.1`
+  - `git tag -d v0.1.8`
+  - `git push origin :refs/tags/v0.1.8`
 
 ---
 
