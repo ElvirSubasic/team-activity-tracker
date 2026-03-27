@@ -1,5 +1,5 @@
 {
-  "name": "mrketing-team-tracker",
+  "name": "team-activity-tracker",
   "version": "0.1.0",
   "private": true,
   "author": "Elvir Subasic",
@@ -51,8 +51,9 @@
     "wait-on": "^8.0.1"
   },
   "build": {
-    "appId": "com.example.mrketingteamtracker",
-    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "appId": "com.elvirsubasic.teamactivitytracker",
+    "artifactName": "team-activity-tracker-${version}-${os}-${arch}.${ext}",
+    "executableName": "team-activity-tracker",
     "buildDependenciesFromSource": true,
     "npmRebuild": false,
     "files": [
@@ -62,9 +63,11 @@
     ],
     "productName": "Team Activity Tracker",
     "linux": {
-      "category": "Office"
+      "category": "Office",
+      "icon": "build/icons/icon.png"
     },
     "win": {
+      "icon": "build/icons/icon.ico",
       "target": [
         {
           "target": "portable",

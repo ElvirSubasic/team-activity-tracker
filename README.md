@@ -570,7 +570,7 @@ Use when SQLite native binding compatibility becomes an issue.
 
 Expected artifact:
 
-- `dist/Team Activity Tracker-0.1.0-linux-x86_64.AppImage`
+- `dist/team-activity-tracker-0.1.0-linux-x86_64.AppImage`
 
 ### 12.11 Package Windows executable
 
@@ -578,7 +578,7 @@ Expected artifact:
 
 Expected artifact:
 
-- `dist/Team Activity Tracker-0.1.0-windows-x64.exe`
+- `dist/team-activity-tracker-0.1.0-windows-x64.exe`
 
 ---
 
